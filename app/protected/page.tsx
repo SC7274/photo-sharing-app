@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -7,12 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog'
 
-import { PhotoUploadForm } from "@/components/photo-upload-form"
+import { PhotoUploadForm } from '@/components/photo-upload-form'
 import { LogoutButton } from '@/components/logout-button'
-import { createClient } from '@/lib/supabase/server'
 import { AlbumPreviewCard } from '@/components/album-preview-card'
+import { createClient } from '@/lib/supabase/server'
 
 export default async function ProtectedPage() {
   const supabase = await createClient()
@@ -22,37 +23,24 @@ export default async function ProtectedPage() {
     redirect('/auth/login')
   }
 
-  // Fetch albums
-  const { data: albums, error: albumsError } = await supabase
-    .from('albums')
-    .select('id, name, slug, description')
-    .eq('user_id', userData.user.id)
-    .order('created_at', { ascending: false })
+  // Dynamically determine host and protocol for absolute fetch URL
+  const headersList = headers()
+  const host = headersList.get('host')
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
 
-  const albumsWithCover = await Promise.all(
-    (albums ?? []).map(async (album) => {
-      const { data: image } = await supabase
-        .from('images')
-        .select('image_url')
-        .eq('album_id', album.id)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle()
+  // Call the API route to get albums with covers
+  const res = await fetch(`${protocol}://${host}/api/albums/user`, {
+    headers: {
+      Cookie: headersList.get('cookie') || '',
+    },
+    cache: 'no-store',
+  })
 
-      let coverImageUrl: string | null = null
-      if (image?.image_url) {
-        const { data: signedUrl } = await supabase.storage
-          .from('image-bucket')
-          .createSignedUrl(image.image_url, 60 * 60 * 24 * 7)
-        coverImageUrl = signedUrl?.signedUrl ?? null
-      }
+  if (!res.ok) {
+    throw new Error('Failed to fetch albums')
+  }
 
-      return {
-        ...album,
-        coverImageUrl,
-      }
-    })
-  )
+  const { albums } = await res.json()
 
   return (
     <div className="flex flex-col w-full max-w-2xl mx-auto gap-8 py-8">
@@ -78,10 +66,10 @@ export default async function ProtectedPage() {
       <div>
         <h2 className="text-lg font-semibold mb-2">Your Albums</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          {albumsWithCover.length === 0 ? (
+          {albums?.length === 0 ? (
             <p className="text-muted-foreground text-sm italic">No albums yet.</p>
           ) : (
-            albumsWithCover.map((album) => (
+            albums.map((album: any) => (
               <AlbumPreviewCard
                 key={album.id}
                 slug={album.slug}
