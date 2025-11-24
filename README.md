@@ -1,4 +1,4 @@
-# Photo Sharing App (Demo)
+# Photo Searching App Demo
 
 This is a small Next.js demo app that showcases viewing and searching a fixed dataset of sample photos.
 
