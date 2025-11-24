@@ -1,105 +1,76 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+<div align="center">
+  <h1>Moorcheh RAG Demo</h1>
+  <p>A stripped-down Next.js playground you can wire into the Moorcheh Retrieval Augmented Generation platform later.</p>
+</div>
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+## Why this exists
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+You asked for the photo sharing starter to be simplified into a lightweight Moorcheh RAG demo. Everything unrelated to that goal has been removed from the UI so you can focus on:
 
-## Features
+- communicating the product narrative to stakeholders
+- experimenting with copy, layout, and calls to action
+- preparing the hooks you will use once the official Moorcheh SDK lands
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Middleware
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+## What's included
 
-## Demo
+- ✅ App Router + Tailwind CSS styling
+- ✅ Landing page with highlights, integration steps, and roadmap CTA
+- ✅ `/api/rag` route that calls the Moorcheh HTTP API from Node.js (using the `X-API-Key` header)
+- ✅ Scripts to upload sample photos + captions to Supabase and ingest them into a Moorcheh namespace
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+## Getting started
 
-## Deploy to Vercel
+```bash
+npm install
+npm run dev
+# open http://localhost:3000
+```
 
-Vercel deployment will guide you through creating a Supabase account and project.
+## Using the Moorcheh HTTP API from Node.js
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+The helper in `lib/moorcheh.ts` mirrors the raw fetch call below so you can reuse it in scripts, route handlers, or server actions:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
+```ts
+const apiKey = process.env.MOORCHEH_API_KEY;
+const response = await fetch("https://api.moorcheh.ai/v1/namespaces", {
+  method: "GET",
+  headers: {
+    "X-API-Key": apiKey,
+    "Content-Type": "application/json",
+  },
+});
+const namespaces = await response.json();
+```
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+Available helpers:
 
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
+- `listNamespaces()` – wraps `GET /v1/namespaces`
+- `ingestDocuments(namespace, docs)` – posts captions to `POST /v1/namespaces/:namespace/documents`
+- `queryNamespace(namespace, question, topK?)` – sends questions to `POST /v1/namespaces/:namespace/rag`
 
-## Clone and run locally
+Need quick utilities?
 
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
+- `npm run moorcheh:namespaces` → lists available namespaces via `GET /v1/namespaces`.
+- `npm run moorcheh:push` → reads captions from Supabase and posts them to `POST /v1/namespaces/:namespace/documents`.
+- `npm run moorcheh:search -- "dogs playing in snow"` → calls `POST /v1/query/:namespace` so you can test semantic search directly from Node.
 
-2. Create a Next.js app using the Supabase Starter template npx command
+## Wire up your own data
 
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
+1. Seed Supabase with demo media (still via `scripts/upload-images.ts`).
+2. Run `ts-node scripts/push-captions.ts` to push `{ id, text, metadata }` documents into your Moorcheh namespace using `POST /v1/namespaces/:namespace/documents`.
+3. Visit `/` and use the live form (powered by `/api/rag`) to confirm answers come back with citations.
 
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
+Environment variables you need:
 
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
+- `MOORCHEH_API_KEY`
+- `MOORCHEH_API_BASE` (defaults to `https://api.moorcheh.ai/v1`)
+- `MOORCHEH_NAMESPACE`
+- `MOORCHEH_RAG_MODEL` (optional override, defaults to `gpt-4o-mini`)
+- `MOORCHEH_TOP_K` (optional)
 
-3. Use `cd` to change into the app's directory
+## Next steps
 
-   ```bash
-   cd with-supabase-app
-   ```
-
-4. Rename `.env.example` to `.env.local` and update the following:
-
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=[INSERT SUPABASE PROJECT API ANON KEY]
-   ```
-
-   Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
-
-5. You can now run the Next.js local development server:
-
-   ```bash
-   npm run dev
-   ```
-
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
-
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
-
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
-
-## Feedback and issues
-
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
-
-## More Supabase examples
-
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+- Replace the placeholder CTA with your actual waitlist or integration flow.
+- Add telemetry (PostHog, Vercel Analytics, etc.) once you need usage insights.
+- Expand the API route into a streamed response when the Moorcheh SDK supports it.
+- Layer in guardrails/tooling once Moorcheh exposes them over the same HTTP API.
